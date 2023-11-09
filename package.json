@@ -2,8 +2,16 @@
   "name": "@back-testing/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "serve": "nx serve"
+  },
   "private": true,
+  "lint-staged": {
+    "*": [
+      "prettier --cache --ignore-unknown --write"
+    ],
+    "*.{ts,js,html}": "eslint --cache --fix"
+  },
   "dependencies": {
     "@angular/animations": "~16.2.0",
     "@angular/common": "~16.2.0",
@@ -14,8 +22,11 @@
     "@angular/platform-browser-dynamic": "~16.2.0",
     "@angular/router": "~16.2.0",
     "@nx/angular": "17.0.3",
+    "echarts": "^5.4.3",
+    "ngx-echarts": "^17.0.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.13.0"
   },
   "devDependencies": {

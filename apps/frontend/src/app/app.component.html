@@ -1,2 +1,4 @@
-<back-testing-nx-welcome></back-testing-nx-welcome>
-<router-outlet></router-outlet>
+<div echarts [options]="options1" [merge]="updateOptions1"></div>
+
+<button (click)="RandomDataset()">Random Dataset</button>
+<div echarts [options]="options2" [merge]="mergeOptions2"></div>
