@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { EChartsOption } from 'echarts';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Observable, catchError, from, map, switchMap } from 'rxjs';
@@ -10,15 +10,9 @@ type DataT = {
   value: [string, number];
 };
 
-export interface UploadRawLine {
-  A: string;
+export interface RawLine {
   B: string;
   C: string;
-  D: string;
-}
-
-export interface UploadNumberedRawLine extends UploadRawLine {
-  lineNumber: string;
 }
 
 @Component({
@@ -28,36 +22,27 @@ export interface UploadNumberedRawLine extends UploadRawLine {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit {
   httpClient = inject(HttpClient);
   title = 'frontend';
+  initOpts = {
+    renderer: 'canvas',
+    animation: 'linear',
+  };
+  options0!: EChartsOption;
+  updateOptions0!: EChartsOption;
+  loading = true;
 
-  // First example
-
-  options1!: EChartsOption;
-  updateOptions1!: EChartsOption;
-
-  private oneDay = 24 * 3600 * 1000;
-  private now!: Date;
-  private value!: number;
   private data!: DataT[];
-  private timer!: any;
 
   ngOnInit(): void {
-    // generate some random testing data:
+    // initialize chart
     this.data = [];
-    this.now = new Date(1997, 9, 3);
-    this.value = Math.random() * 1000;
-
-    for (let i = 0; i < 1000; i++) {
-      this.data.push(this.randomData());
-    }
-
-    // initialize chart options:
-    this.options1 = {
+    this.options0 = {
       title: {
-        text: 'Dynamic Data + Time Axis',
+        text: 'Prix de Lyxor MSCI World - EWLD',
       },
+      legend: {},
       tooltip: {
         trigger: 'axis',
         formatter: (params: any) => {
@@ -80,42 +65,24 @@ export class AppComponent implements OnInit, OnDestroy {
       xAxis: {
         type: 'time',
         splitLine: {
-          show: false,
+          show: true,
         },
       },
       yAxis: {
         type: 'value',
-        boundaryGap: [0, '100%'],
         splitLine: {
-          show: false,
+          show: true,
         },
       },
       series: [
         {
-          name: 'Mocking Data',
+          name: 'EWLD',
           type: 'line',
           showSymbol: false,
           data: this.data,
         },
       ],
     };
-
-    // Mock dynamic data:
-    // this.timer = setInterval(() => {
-    //   for (let i = 0; i < 5; i++) {
-    //     this.data.shift();
-    //     this.data.push(this.randomData());
-    //   }
-
-    //   // update series data:
-    //   this.updateOptions1 = {
-    //     series: [
-    //       {
-    //         data: this.data,
-    //       },
-    //     ],
-    //   };
-    // }, 1000);
 
     this.httpClient
       .get(
@@ -125,35 +92,30 @@ export class AppComponent implements OnInit, OnDestroy {
         { responseType: 'blob' }
       )
       .pipe(
+        catchError((err) => {
+          console.error(err);
+          this.loading = false;
+          return [];
+        }),
         map((res: Blob) => new File([res], 'etf.xlsx')),
-        switchMap(this.loadRawLines.bind(this))
+        switchMap(this.loadRawLines.bind(this)),
+        map((rawLines) => this.mapRawLinesToIndiceData(rawLines))
       )
-      .subscribe();
+      .subscribe((data) => {
+        this.loading = false;
+        this.updateOptions0 = {
+          series: [
+            {
+              data: data,
+            },
+          ],
+        };
+      });
   }
 
-  ngOnDestroy() {
-    clearInterval(this.timer);
-  }
+  // Example
 
-  randomData(): DataT {
-    this.now = new Date(this.now.getTime() + this.oneDay);
-    this.value = this.value + Math.random() * 21 - 10;
-    return {
-      name: this.now.toString(),
-      value: [
-        [
-          this.now.getFullYear(),
-          this.now.getMonth() + 1,
-          this.now.getDate(),
-        ].join('/'),
-        Math.round(this.value),
-      ],
-    };
-  }
-
-  // Second example
-
-  options2: EChartsOption = {
+  options1: EChartsOption = {
     legend: {},
     tooltip: {},
     dataset: {
@@ -176,10 +138,10 @@ export class AppComponent implements OnInit, OnDestroy {
     series: [{ type: 'bar' }, { type: 'bar' }, { type: 'bar' }],
   };
 
-  mergeOptions2!: EChartsOption;
+  mergeOptions1!: EChartsOption;
 
   RandomDataset() {
-    this.mergeOptions2 = {
+    this.mergeOptions1 = {
       dataset: {
         source: [
           ['product', '2015', '2016', '2017'],
@@ -200,18 +162,16 @@ export class AppComponent implements OnInit, OnDestroy {
     return res;
   }
 
-  loadRawLines(file: File): Observable<any[]> {
-    // loadRawLines(file: File): Observable<UploadNumberedRawLine[]> {
+  loadRawLines(file: File): Observable<RawLine[]> {
     return this.convertFileToRawLines(file).pipe(
-      map(this.extractHeader.bind(this)),
-      map(this.mapWithLineNumber.bind(this))
+      map(this.extractHeader.bind(this))
     );
   }
 
-  private convertFileToRawLines(file: File): Observable<UploadRawLine[]> {
+  private convertFileToRawLines(file: File): Observable<RawLine[]> {
     const options: Sheet2JSONOpts = {
       blankrows: false,
-      header: 1,
+      header: 'A',
       raw: true,
       rawNumbers: false,
     };
@@ -247,6 +207,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private getFirstRow(content: WorkSheet): number | undefined {
+    // https://docs.sheetjs.com/docs/demos/bigdata/ml#importing-data-from-a-spreadsheet
     let firstRow = undefined;
 
     /* find worksheet range */
@@ -267,19 +228,42 @@ export class AppComponent implements OnInit, OnDestroy {
     return firstRow;
   }
 
-  private extractHeader(lines: UploadRawLine[]): UploadRawLine[] {
+  private extractHeader(lines: RawLine[]): RawLine[] {
     const header = lines[0];
     if (!header) throw new Error('Empty file');
     // this.setter.setFileHeaders(header);
     return lines.slice(1);
   }
 
-  private mapWithLineNumber(
-    rawLines: UploadRawLine[]
-  ): UploadNumberedRawLine[] {
-    return rawLines.map((rawLine, index) => ({
-      ...rawLine,
-      lineNumber: (index + 2).toString(),
-    }));
+  private mapRawLinesToIndiceData(rawLines: RawLine[]): DataT[] {
+    rawLines.forEach((rawLine) => {
+      const split = rawLine.B.split('/');
+      const date = new Date(
+        parseFloat(split[2]),
+        parseFloat(split[1]),
+        parseFloat(split[0])
+      );
+
+      // check if we got a valid date
+      if (date.getTime()) {
+        const value = `${split[2]}/${split[1]}/${split[0]}`;
+        this.data.push(
+          this.mapRawLineToIndiceData(rawLine, date.toString(), value)
+        );
+      }
+    });
+
+    return this.data;
+  }
+
+  private mapRawLineToIndiceData(
+    rawLine: RawLine,
+    date: string,
+    valueXAxis: string
+  ): DataT {
+    return {
+      name: date,
+      value: [valueXAxis, parseFloat(rawLine.C.replace(',', '.'))],
+    };
   }
 }

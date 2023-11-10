@@ -1,4 +1,10 @@
-<div echarts [options]="options1" [merge]="updateOptions1"></div>
+<div
+  echarts
+  [initOpts]="initOpts"
+  [options]="options0"
+  [merge]="updateOptions0"
+  [loading]="loading"
+></div>
 
 <button (click)="RandomDataset()">Random Dataset</button>
-<div echarts [options]="options2" [merge]="mergeOptions2"></div>
+<div echarts [options]="options1" [merge]="mergeOptions1"></div>
