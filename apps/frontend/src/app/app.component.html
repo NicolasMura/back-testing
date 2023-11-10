@@ -1,10 +1,46 @@
-<div
-  echarts
-  [initOpts]="initOpts"
-  [options]="options0"
-  [merge]="updateOptions0"
-  [loading]="loading"
-></div>
+<div style="margin: 20px 20px">
+  <form [formGroup]="form">
+    <div>
+      <label for="startDate">Investment</label><br />
+      <select id="investment" formControlName="investment" class="form-control">
+        <option *ngFor="let investment of investments" [ngValue]="investment">
+          {{ investment.name }}
+        </option>
+      </select>
+    </div>
 
-<button (click)="RandomDataset()">Random Dataset</button>
-<div echarts [options]="options1" [merge]="mergeOptions1"></div>
+    <div>
+      <label for="startDate">Start date</label><br />
+      <select id="startDate" formControlName="startDate" class="form-control">
+        <option *ngFor="let startDate of startDates" [ngValue]="startDate">
+          {{ startDate | date }}
+        </option>
+      </select>
+    </div>
+
+    <div>
+      <label for="endDate">End date</label><br />
+      <select id="endDate" formControlName="endDate" class="form-control">
+        <option *ngFor="let endDate of endDates" [ngValue]="endDate">
+          {{ endDate | date }}
+        </option>
+      </select>
+    </div>
+  </form>
+
+  <div
+    echarts
+    [initOpts]="initOpts"
+    [options]="options0"
+    [merge]="updateOptions0"
+    [loading]="loading"
+    (chartInit)="onChartInit($event)"
+    style="margin-top: 20px"
+  ></div>
+</div>
+
+<!-- Debug form START -->
+<pre style="font-size: 15px">DEBUG</pre>
+<pre style="font-size: 15px">{{ form.getRawValue() | json }}</pre>
+<pre style="font-size: 15px">{{ form.valid | json }}</pre>
+<!-- Debug form END -->
