@@ -23,6 +23,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { Sheet2JSONOpts, WorkSheet, read, utils } from 'xlsx';
+import { computeCapital, computeInputs } from './utils';
 
 type DataT = {
   name: string;
@@ -65,6 +66,12 @@ export class AppComponent implements OnInit {
 
   investments: Investment[] = [
     {
+      name: 'ELWD from 1978',
+      code: 'ELXD-1978',
+      isinCode: 'xxxxx',
+      sheetname: 'assets/chart-MSCI-World-perf-from-1978.xlsx',
+    },
+    {
       name: 'Lyxor PEA Monde (MSCI World) UCITS ETF - ELWD',
       code: 'ELWD',
       isinCode: 'FR0011869353',
@@ -90,8 +97,8 @@ export class AppComponent implements OnInit {
   endDates: string[] = [];
   form = this.nnfb.group({
     investment: [this.investments[0]],
-    startDate: [new Date().toISOString().split('T')[0]],
-    endDate: [new Date().toISOString().split('T')[0]],
+    startDate: [''],
+    endDate: [''],
     initialCapital: [
       1000,
       [
@@ -124,6 +131,17 @@ export class AppComponent implements OnInit {
           this.updateStartDates(curr.endDate as string);
         }
       });
+
+    const averageAnnualPerformance = 0.1;
+    const annualManagementFees = 0.0075;
+    const averageMonthlyPerformance =
+      Math.pow(1 + averageAnnualPerformance, 1 / 12) - 1;
+    console.log('averageMonthlyPerformance', averageMonthlyPerformance);
+    const monthlyFeesRate = Math.pow(1 + annualManagementFees, 1 / 12) - 1;
+    console.log(computeInputs(0, 350, 2));
+    console.log(
+      computeCapital(0, 350, 2, averageMonthlyPerformance, monthlyFeesRate)
+    );
   }
 
   onChartInit(e: ECharts) {
@@ -145,7 +163,7 @@ export class AppComponent implements OnInit {
           return (
             date.getDate() +
             '/' +
-            (date.getMonth() + 1) +
+            date.getMonth() +
             '/' +
             date.getFullYear() +
             ' : ' +
@@ -164,6 +182,8 @@ export class AppComponent implements OnInit {
       },
       yAxis: {
         type: 'value',
+        min: 'dataMin',
+        max: 'dataMax',
         splitLine: {
           show: true,
         },
@@ -222,6 +242,7 @@ export class AppComponent implements OnInit {
         map((rawLines) => this.mapRawLinesToIndiceData(rawLines))
       )
       .subscribe((data) => {
+        console.log('data', data);
         this.data = data;
         this.loading = false;
         this.updateOptions0 = {
@@ -263,8 +284,8 @@ export class AppComponent implements OnInit {
         if (!firstRow) throw new Error('No cell containing "VL officielle"!');
         return { content, firstRow };
       }),
-      catchError(() => {
-        throw new Error('No cell containing "VL officielle"!');
+      catchError((err) => {
+        throw new Error(err);
       }),
       map((result) =>
         utils.sheet_to_json(result.content, {
